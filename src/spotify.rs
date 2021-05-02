@@ -1,5 +1,5 @@
 use crate::Song;
-use aspotify::{Client, ClientCredentials, Scope, Track, Playlist};
+use aspotify::{Client, ClientCredentials, Scope};
 use dotenv::dotenv;
 use std::env;
 use std::io;
