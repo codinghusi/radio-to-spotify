@@ -1,0 +1,17 @@
+[package]
+name = "radio-to-spotify"
+version = "0.1.0"
+authors = ["Gerrit <gerrit.weiermann@gmx.de>"]
+edition = "2018"
+
+[dependencies]
+reqwest = "*"
+select = "*"
+scraper = "*"
+prettytable-rs = "*"
+futures = "*"
+tokio = { version = "1.5.0", features = ["full"] }
+chrono = "*"
+aspotify = "*"
+dotenv = "*"
+env = "*"
