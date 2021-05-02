@@ -39,7 +39,6 @@ async fn scrape_playlist(params: &SearchParams) -> Vec<Song> {
         ("playlistSearch_minutes", &String::from("00")),
         ("submit", &String::from("suchen"))
     ];
-    println!("params: {:?}", &params);
     let client = reqwest::Client::new();
     let response = client.post(url)
                          .header(reqwest::header::USER_AGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0")
@@ -70,17 +69,6 @@ async fn scrape_playlist(params: &SearchParams) -> Vec<Song> {
     }
 
     playlist
-}
-
-fn request_body(params: &[(&str, &String)]) -> String {
-    let mut result = String::new();
-    let mut separator = "";
-    for param in params {
-        let (key, value) = param;
-        result = format!("{}{}{}={}", result, &separator, &key, &value);
-        separator = "&";
-    }
-    result
 }
 
 pub fn distinct_playlist(playlist: Vec<Song>) -> Vec<Song> {

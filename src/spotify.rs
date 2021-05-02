@@ -47,18 +47,15 @@ pub async fn publish(songs: &Vec<Song>) {
     dotenv().unwrap();
 
     let client_id = env::var("CLIENT_ID").expect("Please provide environment variable CLIENT_ID");
-    let playlist_name = env::var("PLAYLIST_NAME").expect("Environment variable PLAYLIST_NAME not set");
+    let playlist_id = env::var("PLAYLIST_ID").expect("Environment variable PLAYLIST_ID not set");
 
     let credentials = ClientCredentials::from_env().expect("CLIENT_ID and CLIENT_SECRET not found.");
 
     let client = get_client(credentials, &client_id).await;
 
-    // Gets the album "Favourite Worst Nightmare" from Spotify, with no specified market.
-    let playlist = get_cleared_playlist(&client, &playlist_name).await;
-
-    import_tracks(&client, &playlist.id, songs).await;
-
-    println!("{}, {}", playlist.name, playlist.description.unwrap());
+    let mut playlist = client.playlists().get_playlist(&playlist_id, None).await.unwrap().data;
+    clear_playlist(&client, &mut playlist).await;
+    import_tracks(&client, &playlist, songs).await;
 
     save_refresh_token(&client.refresh_token().await.unwrap());
 }
@@ -69,7 +66,7 @@ async fn get_track_id<'a>(client: &Client, name: &String) -> Option<String> {
     items[0].id.take()
 }
 
-async fn import_tracks(client: &Client, playlist_id: &String, songs: &Vec<Song>) {
+async fn import_tracks(client: &Client, playlist: &aspotify::Playlist, songs: &Vec<Song>) {
     // collect tracks
     let total = songs.len();
     let mut tracks: Vec<aspotify::PlaylistItemType<String, String>> = vec![];
@@ -85,10 +82,11 @@ async fn import_tracks(client: &Client, playlist_id: &String, songs: &Vec<Song>)
 
     // upload
     println!("uploading all to the playlist");
-    add_tracks(client, playlist_id, tracks).await;
+    add_tracks(client, playlist, tracks).await;
 }
 
-async fn add_tracks(client: &Client, playlist_id: &String, tracks: Vec<aspotify::PlaylistItemType<String, String>>) {
+async fn add_tracks(client: &Client, playlist: &aspotify::Playlist, tracks: Vec<aspotify::PlaylistItemType<String, String>>) {
+    let playlist_id = &playlist.id;
     let mut offset = 0;
     let total = tracks.len();
     while offset < total {
@@ -98,36 +96,38 @@ async fn add_tracks(client: &Client, playlist_id: &String, tracks: Vec<aspotify:
     }
 }
 
-async fn get_playlist_by_name(client: &Client, name: &String) -> Option<aspotify::PlaylistSimplified> {
-    let playlists = client.playlists().current_users_playlists(50, 0).await.ok()?;
-    let playlists = playlists.data.items;
-    for playlist in playlists {
-        if playlist.name.eq(name) {
-            return Some(playlist);
+async fn clear_playlist(client: &Client, playlist: &mut aspotify::Playlist) {
+    println!("> clearing playlist...");
+
+    let playlist_id = &playlist.id;
+    let mut offset: usize = 0;
+
+    println!("fetching batch {}-{}", offset, offset+50);
+    while let Ok(response) = client.playlists().get_playlists_items(playlist_id, 50, offset, None).await {
+        // got batch of tracks
+        let tracks = response.data.items;
+        if tracks.len() == 0 {
+            break;
         }
+
+        // remove the batch
+        let mut items: Vec<(aspotify::PlaylistItemType<String, String>, Option<&[usize]>)> = vec![];
+        for track in tracks {
+            if let Some(track) = &track.item {
+                if let aspotify::PlaylistItemType::Track(track) = &track {
+                    if let Some(track_id) = &track.id {
+                        items.push((aspotify::PlaylistItemType::Track(track_id.to_string()), None));
+                        continue;
+                    }
+                }
+            }
+            println!("debug: is no track {:?}", &track);
+        }
+
+        println!("removing batch {}-{}", offset, offset+50);
+        playlist.snapshot_id = client.playlists().remove_from_playlist(playlist_id, items, &playlist.snapshot_id).await.unwrap();
+        
+        offset += 50;
+        println!("fetching batch {}-{}", offset, offset+60);
     }
-    None
-}
-
-async fn clear_playlist(client: &Client, playlist: aspotify::PlaylistSimplified) -> Option<aspotify::Playlist> {
-    let name = &playlist.name;
-    // println!("now I would actually delete playlist {} with id {}", name, &playlist.id);
-    client.follow().unfollow_playlist(&playlist.id).await.expect("While clearing playlist: couldn't unfollow");
-    let new_playlist = create_playlist(&client, &name).await;
-    Some(new_playlist)
-}
-
-async fn create_playlist(client: &Client, name: &String) -> aspotify::Playlist {
-    client.playlists()
-        .create_playlist(&name, true, false, &"".to_string())
-        .await
-        .expect("While clearing playlist: couldn't create new playlist")
-        .data
-}
-
-async fn get_cleared_playlist(client: &Client, name: &String) -> aspotify::Playlist {
-    if let Some(playlist) = get_playlist_by_name(client, name).await {
-        return clear_playlist(client, playlist).await.unwrap();
-    }
-    create_playlist(&client, &name).await
 }
