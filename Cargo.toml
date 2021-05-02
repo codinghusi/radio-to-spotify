@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["Gerrit <gerrit.weiermann@gmx.de>"]
 edition = "2018"
 
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
 [dependencies]
 reqwest = "*"
 select = "*"
