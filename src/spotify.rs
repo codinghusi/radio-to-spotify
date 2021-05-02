@@ -97,37 +97,39 @@ async fn add_tracks(client: &Client, playlist: &aspotify::Playlist, tracks: Vec<
 }
 
 async fn clear_playlist(client: &Client, playlist: &mut aspotify::Playlist) {
-    println!("> clearing playlist...");
+    let items: Vec<aspotify::PlaylistItemType<String, String>> = vec![];
+    client.playlists().replace_playlists_items(&playlist.id, items).await.unwrap();
+    // println!("> clearing playlist...");
 
-    let playlist_id = &playlist.id;
-    let mut offset: usize = 0;
+    // let playlist_id = &playlist.id;
+    // let mut offset: usize = 0;
 
-    println!("fetching batch {}-{}", offset, offset+50);
-    while let Ok(response) = client.playlists().get_playlists_items(playlist_id, 50, offset, None).await {
-        // got batch of tracks
-        let tracks = response.data.items;
-        if tracks.len() == 0 {
-            break;
-        }
+    // println!("fetching batch {}-{}", offset, offset+50);
+    // while let Ok(response) = client.playlists().get_playlists_items(playlist_id, 50, offset, None).await {
+    //     // got batch of tracks
+    //     let tracks = response.data.items;
+    //     if tracks.len() == 0 {
+    //         break;
+    //     }
 
-        // remove the batch
-        let mut items: Vec<(aspotify::PlaylistItemType<String, String>, Option<&[usize]>)> = vec![];
-        for track in tracks {
-            if let Some(track) = &track.item {
-                if let aspotify::PlaylistItemType::Track(track) = &track {
-                    if let Some(track_id) = &track.id {
-                        items.push((aspotify::PlaylistItemType::Track(track_id.to_string()), None));
-                        continue;
-                    }
-                }
-            }
-            println!("debug: is no track {:?}", &track);
-        }
+    //     // remove the batch
+    //     let mut items: Vec<(aspotify::PlaylistItemType<String, String>, Option<&[usize]>)> = vec![];
+    //     for track in tracks {
+    //         if let Some(track) = &track.item {
+    //             if let aspotify::PlaylistItemType::Track(track) = &track {
+    //                 if let Some(track_id) = &track.id {
+    //                     items.push((aspotify::PlaylistItemType::Track(track_id.to_string()), None));
+    //                     continue;
+    //                 }
+    //             }
+    //         }
+    //         println!("debug: is no track {:?}", &track);
+    //     }
 
-        println!("removing batch {}-{}", offset, offset+50);
-        playlist.snapshot_id = client.playlists().remove_from_playlist(playlist_id, items, &playlist.snapshot_id).await.unwrap();
+    //     println!("removing batch {}-{} ({} items)", offset, offset+50, items.len());
+    //     playlist.snapshot_id = client.playlists().remove_from_playlist(playlist_id, items, &playlist.snapshot_id).await.unwrap();
         
-        offset += 50;
-        println!("fetching batch {}-{}", offset, offset+60);
-    }
+    //     offset += 50;
+    //     println!("fetching batch {}-{}", offset, offset+50);
+    // }
 }

@@ -1,4 +1,4 @@
-#[derive(Hash, Eq)]
+#[derive(Hash, Eq, Clone)]
 pub struct Song {
     pub time_str: String,
     pub title: String,

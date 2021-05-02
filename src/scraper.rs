@@ -1,7 +1,7 @@
-use std::collections::HashSet;
 use scraper::{Html, Selector};
 use chrono::{Utc};
 use crate::util::{Song, SearchParams};
+use itertools::Itertools;
 
 pub async fn scrape() -> Vec<Song> {
     let playlist = radio_to_playlist(&yesterday()).await;
@@ -72,9 +72,5 @@ async fn scrape_playlist(params: &SearchParams) -> Vec<Song> {
 }
 
 pub fn distinct_playlist(playlist: Vec<Song>) -> Vec<Song> {
-    let mut new = HashSet::new();
-    for song in playlist {
-        new.insert(song);
-    }
-    new.into_iter().collect()
+    playlist.into_iter().unique().collect()
 }
