@@ -1,3 +1,4 @@
+use chrono::Duration;
 use scraper::{Html, Selector};
 use chrono::{Utc};
 use crate::util::{Song, SearchParams};
@@ -28,7 +29,8 @@ async fn radio_to_playlist(day: &str) -> Vec<Song> {
 }
 
 fn yesterday() -> String {
-    Utc::now().format("%Y-%m-%d").to_string()
+    let yesterday = Utc::now() - Duration::days(1);
+    yesterday.format("%Y-%m-%d").to_string()
 }
 
 async fn scrape_playlist(params: &SearchParams) -> Vec<Song> {
