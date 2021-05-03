@@ -37,15 +37,13 @@ pub async fn get_client(credentials: ClientCredentials, client_id: &String) -> C
 
 pub async fn publish(client: &Client, playlist_id: &str, songs: &Vec<Song>) {
     println!("> fetching the actual playlist");
-    let mut playlist = client.playlists().get_playlist(&playlist_id, None).await.unwrap().data;
-
-    println!("> clearing it first");
-    clear_playlist(&client, &mut playlist).await;
+    let playlist = client.playlists().get_playlist(&playlist_id, None).await.unwrap().data;
 
     println!("> importing...");
     import_tracks(&client, &playlist, songs).await;
 
     config::save_refresh_token(&client.refresh_token().await.unwrap());
+    println!("DONE!");
 }
 
 async fn get_track_id<'a>(client: &Client, name: &String) -> Option<String> {
@@ -54,11 +52,9 @@ async fn get_track_id<'a>(client: &Client, name: &String) -> Option<String> {
     items[0].id.take()
 }
 
-async fn import_tracks(client: &Client, playlist: &aspotify::Playlist, songs: &Vec<Song>) {
-    // collect tracks
+async fn search_tracks(client: &Client, songs: &Vec<Song>) -> Vec<aspotify::PlaylistItemType<String, String>> {
     let total = songs.len();
     let mut tracks: Vec<aspotify::PlaylistItemType<String, String>> = vec![];
-    println!("=> searching all {} tracks", &total);
     for (i, song) in songs.iter().enumerate() {
         if let Some(track_id) = get_track_id(client, &song.title).await {
             println!("-> {}/{} - found track {} with id {}", &i + 1, &total, &song.title, &track_id);
@@ -67,8 +63,14 @@ async fn import_tracks(client: &Client, playlist: &aspotify::Playlist, songs: &V
             println!("-> couldn't find {}", &song.title);
         }
     }
+    tracks
+}
 
-    // upload
+async fn import_tracks(client: &Client, playlist: &aspotify::Playlist, songs: &Vec<Song>) {
+    println!("=> searching for all {} tracks", &songs.len());
+    let tracks = search_tracks(client, songs).await;
+    println!("=> clearing it first");
+    clear_playlist(&client, &playlist).await;
     println!("=> uploading all to the playlist");
     add_tracks(client, playlist, tracks).await;
 }
@@ -84,7 +86,7 @@ async fn add_tracks(client: &Client, playlist: &aspotify::Playlist, tracks: Vec<
     }
 }
 
-async fn clear_playlist(client: &Client, playlist: &mut aspotify::Playlist) {
+async fn clear_playlist(client: &Client, playlist: &aspotify::Playlist) {
     let items: Vec<aspotify::PlaylistItemType<String, String>> = vec![];
     client.playlists().replace_playlists_items(&playlist.id, items).await.unwrap();
 }
