@@ -18,7 +18,7 @@ edit `config.template.json` and rename it to `config.json`
 
 ### If step 4 didn't work
 9. Request your refresh token using [this guide](https://benwiz.com/blog/create-spotify-refresh-token/) and begin at step 3
-10. create a file .refresh_token and paste the refresh_token
+10. Create a file .refresh_token and paste the refresh_token
 
 Now it should work :)
 Have fun!
