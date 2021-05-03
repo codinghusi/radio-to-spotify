@@ -1,0 +1,16 @@
+{
+    "playlists": [
+        {
+            "radio": "1 Live",
+            "spotify_playlist_id": "xxx"
+        }, 
+        {
+            "radio": "WDR 2",
+            "spotify_playlist_id": "xxx"
+        }
+    ],
+    "auth": {
+        "client_id": "xxx",
+        "client_secret": "xxx"
+    }
+}

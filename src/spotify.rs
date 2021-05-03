@@ -1,23 +1,15 @@
 use crate::Song;
 use aspotify::{Client, ClientCredentials, Scope};
-use dotenv::dotenv;
-use std::env;
 use std::io;
-use std::fs;
 use std::cmp::min;
+use crate::config;
 
-fn load_refresh_token() -> Option<String> {
-    fs::read_to_string(".refresh_token").ok()
-}
-
-fn save_refresh_token(refresh_token: &String) {
-    fs::write(".refresh_token", refresh_token).unwrap();
-}
 
 async fn prompt_refresh_token(client: &Client, client_id: &String) {
     let scopes = vec![
         Scope::PlaylistModifyPublic,
-        Scope::UserFollowModify
+        Scope::PlaylistModifyPrivate,
+        Scope::UserFollowModify,
     ];
     let (url, state) = aspotify::authorization_url(client_id, scopes, false, "http://non.existant/");
     println!("## Authorization ##");
@@ -29,11 +21,11 @@ async fn prompt_refresh_token(client: &Client, client_id: &String) {
 
     client.redirected(&redirected_url, &state).await.unwrap();
 
-    save_refresh_token(&client.refresh_token().await.unwrap());
+    config::save_refresh_token(&client.refresh_token().await.unwrap());
 }
 
-async fn get_client(credentials: ClientCredentials, client_id: &String) -> Client {
-    if let Some(refresh_token) = load_refresh_token() {
+pub async fn get_client(credentials: ClientCredentials, client_id: &String) -> Client {
+    if let Some(refresh_token) = config::load_refresh_token() {
         let client = Client::with_refresh(credentials, refresh_token);
         client
     } else {
@@ -43,21 +35,17 @@ async fn get_client(credentials: ClientCredentials, client_id: &String) -> Clien
     }
 }
 
-pub async fn publish(songs: &Vec<Song>) {
-    dotenv().unwrap();
-
-    let client_id = env::var("CLIENT_ID").expect("Please provide environment variable CLIENT_ID");
-    let playlist_id = env::var("PLAYLIST_ID").expect("Environment variable PLAYLIST_ID not set");
-
-    let credentials = ClientCredentials::from_env().expect("CLIENT_ID and CLIENT_SECRET not found.");
-
-    let client = get_client(credentials, &client_id).await;
-
+pub async fn publish(client: &Client, playlist_id: &str, songs: &Vec<Song>) {
+    println!("> fetching the actual playlist");
     let mut playlist = client.playlists().get_playlist(&playlist_id, None).await.unwrap().data;
+
+    println!("> clearing it first");
     clear_playlist(&client, &mut playlist).await;
+
+    println!("> importing...");
     import_tracks(&client, &playlist, songs).await;
 
-    save_refresh_token(&client.refresh_token().await.unwrap());
+    config::save_refresh_token(&client.refresh_token().await.unwrap());
 }
 
 async fn get_track_id<'a>(client: &Client, name: &String) -> Option<String> {
@@ -70,18 +58,18 @@ async fn import_tracks(client: &Client, playlist: &aspotify::Playlist, songs: &V
     // collect tracks
     let total = songs.len();
     let mut tracks: Vec<aspotify::PlaylistItemType<String, String>> = vec![];
-    println!("searching all {} tracks", &total);
+    println!("=> searching all {} tracks", &total);
     for (i, song) in songs.iter().enumerate() {
         if let Some(track_id) = get_track_id(client, &song.title).await {
-            println!("{}/{} - found track {} with id {}", &i + 1, &total, &song.title, &track_id);
+            println!("-> {}/{} - found track {} with id {}", &i + 1, &total, &song.title, &track_id);
             tracks.push(aspotify::PlaylistItemType::Track(track_id));
         } else {
-            println!("couldn't find {}", &song.title);
+            println!("-> couldn't find {}", &song.title);
         }
     }
 
     // upload
-    println!("uploading all to the playlist");
+    println!("=> uploading all to the playlist");
     add_tracks(client, playlist, tracks).await;
 }
 
@@ -99,37 +87,4 @@ async fn add_tracks(client: &Client, playlist: &aspotify::Playlist, tracks: Vec<
 async fn clear_playlist(client: &Client, playlist: &mut aspotify::Playlist) {
     let items: Vec<aspotify::PlaylistItemType<String, String>> = vec![];
     client.playlists().replace_playlists_items(&playlist.id, items).await.unwrap();
-    // println!("> clearing playlist...");
-
-    // let playlist_id = &playlist.id;
-    // let mut offset: usize = 0;
-
-    // println!("fetching batch {}-{}", offset, offset+50);
-    // while let Ok(response) = client.playlists().get_playlists_items(playlist_id, 50, offset, None).await {
-    //     // got batch of tracks
-    //     let tracks = response.data.items;
-    //     if tracks.len() == 0 {
-    //         break;
-    //     }
-
-    //     // remove the batch
-    //     let mut items: Vec<(aspotify::PlaylistItemType<String, String>, Option<&[usize]>)> = vec![];
-    //     for track in tracks {
-    //         if let Some(track) = &track.item {
-    //             if let aspotify::PlaylistItemType::Track(track) = &track {
-    //                 if let Some(track_id) = &track.id {
-    //                     items.push((aspotify::PlaylistItemType::Track(track_id.to_string()), None));
-    //                     continue;
-    //                 }
-    //             }
-    //         }
-    //         println!("debug: is no track {:?}", &track);
-    //     }
-
-    //     println!("removing batch {}-{} ({} items)", offset, offset+50, items.len());
-    //     playlist.snapshot_id = client.playlists().remove_from_playlist(playlist_id, items, &playlist.snapshot_id).await.unwrap();
-        
-    //     offset += 50;
-    //     println!("fetching batch {}-{}", offset, offset+50);
-    // }
 }

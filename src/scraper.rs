@@ -1,24 +1,49 @@
-use chrono::Duration;
 use scraper::{Html, Selector};
-use chrono::{Utc};
 use crate::util::{Song, SearchParams};
-use itertools::Itertools;
 
-pub async fn scrape() -> Vec<Song> {
-    let playlist = radio_to_playlist(&yesterday()).await;
-    println!("got {} songs", playlist.len());
-    println!("uploading them to spotify...");
-    playlist
+
+pub enum WDR {
+    WDR1Live,
+    WDR2,
+    WDR3,
+    WDR4,
+    WDR5
 }
 
-async fn radio_to_playlist(day: &str) -> Vec<Song> {
+impl WDR {
+    pub fn get_url(&self) -> &str {
+        match self {
+            Self::WDR1Live => "https://www1.wdr.de/radio/1live/on-air/1live-playlist/index.jsp",
+            Self::WDR2 => "https://www1.wdr.de/radio/wdr2/musik/playlist/index.jsp",
+            Self::WDR3 => "https://www1.wdr.de/radio/wdr3/titelsuche-wdrdrei-104.jsp",
+            Self::WDR4 => "https://www1.wdr.de/radio/wdr4/titelsuche-wdrvier-102.jsp",
+            Self::WDR5 => "https://www1.wdr.de/radio/wdr5/musik/titelsuche-wdrfuenf-104.html",
+        }
+    }
+
+    pub fn from_str(str: &str) -> Result<WDR, String> {
+        let uppercase = str.to_uppercase();
+        let without_spacing = uppercase.replace(" ", "");
+        match &without_spacing[..] {
+            "WDR1" => Ok(WDR::WDR1Live),
+            "1LIVE" => Ok(WDR::WDR1Live),
+            "WDR2" => Ok(WDR::WDR2),
+            "WDR3" => Ok(WDR::WDR3),
+            "WDR4" => Ok(WDR::WDR4),
+            "WDR5" => Ok(WDR::WDR5),
+            _ => Err(format!("Couldn't turn `{}` into a WDR Enum", &str))
+        }
+    }
+}
+
+pub async fn scrape_wdr(day: &str, wdr: &WDR) -> Vec<Song> {
     let mut playlist = vec![];
 
     for hour in 0..24 {
-        let mut songs = scrape_playlist(&SearchParams {
+        let mut songs = scrape_wdr_playlist(&SearchParams {
             date: String::from(day),
             hour,
-        }).await;
+        }, wdr).await;
         
         println!("scraping for hour {}/{} => found {} songs", &hour + 1, 24, songs.len());
 
@@ -28,13 +53,8 @@ async fn radio_to_playlist(day: &str) -> Vec<Song> {
     playlist   
 }
 
-fn yesterday() -> String {
-    let yesterday = Utc::now() - Duration::days(1);
-    yesterday.format("%Y-%m-%d").to_string()
-}
-
-async fn scrape_playlist(params: &SearchParams) -> Vec<Song> {
-    let url = "https://www1.wdr.de/radio/wdr2/musik/playlist/index.jsp";
+async fn scrape_wdr_playlist(params: &SearchParams, wdr: &WDR) -> Vec<Song> {
+    let url = wdr.get_url();
     let params = [
         ("playlistSearch_date", &String::from(&params.date)),
         ("playlistSearch_hours", &params.hour.to_string()),
@@ -54,7 +74,7 @@ async fn scrape_playlist(params: &SearchParams) -> Vec<Song> {
     let body = response.text().await.expect("Couldn't get the response text");
     let document = Html::parse_document(&body);
     
-    let row_selector = Selector::parse("tbody tr").expect("Couldn't select 'tbody tr'");
+    let row_selector = Selector::parse(".table tbody tr").expect("Couldn't select '.table tbody tr'");
 
     let mut playlist = Vec::new();
 
@@ -73,6 +93,3 @@ async fn scrape_playlist(params: &SearchParams) -> Vec<Song> {
     playlist
 }
 
-pub fn distinct_playlist(playlist: Vec<Song>) -> Vec<Song> {
-    playlist.into_iter().unique().collect()
-}

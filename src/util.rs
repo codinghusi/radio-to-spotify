@@ -1,3 +1,6 @@
+use itertools::Itertools;
+use chrono::{Utc, Duration};
+
 #[derive(Hash, Eq, Clone)]
 pub struct Song {
     pub time_str: String,
@@ -22,3 +25,11 @@ pub struct SearchParams {
     pub hour: u8,
 }
 
+pub fn distinct_playlist(playlist: Vec<Song>) -> Vec<Song> {
+    playlist.into_iter().unique().collect()
+}
+
+pub fn yesterday() -> String {
+    let yesterday = Utc::now() - Duration::days(1);
+    yesterday.format("%Y-%m-%d").to_string()
+}
