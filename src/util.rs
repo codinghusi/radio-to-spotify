@@ -8,6 +8,11 @@ pub struct Song {
     pub interprets: String,
 }
 
+pub struct Track {
+    pub title: String,
+    pub track_id: String,
+}
+
 impl std::cmp::PartialEq for Song {
     fn eq(&self, other: &Self) -> bool {
         self.title == other.title

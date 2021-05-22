@@ -4,3 +4,4 @@
 .refresh_token
 config.json
 Cargo.lock
+/history

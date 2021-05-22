@@ -3,7 +3,26 @@ use aspotify::{Client, ClientCredentials, Scope};
 use std::io;
 use std::cmp::min;
 use crate::config;
+use crate::util;
+use crate::util::Track;
+use std::fs::OpenOptions;
+use std::io::prelude::*;
 
+// fn save_to_file(tracks: &Vec<Track>) {
+//     let yesterday = util::yesterday();
+//     tracks.into_iter().map(|track| track.)
+// }
+
+fn append_track(track_id: &str, song: &Song) {
+    let yesterday = util::yesterday();
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .append(true)
+        .open(format!("history/{}.txt", yesterday))
+        .unwrap();
+    writeln!(file, "{}, {}", &track_id, &song.title).unwrap();
+}
 
 async fn prompt_refresh_token(client: &Client, client_id: &String) {
     let scopes = vec![
@@ -58,7 +77,8 @@ async fn search_tracks(client: &Client, songs: &Vec<Song>) -> Vec<aspotify::Play
     for (i, song) in songs.iter().enumerate() {
         if let Some(track_id) = get_track_id(client, &song.title).await {
             println!("-> {}/{} - found track {} with id {}", &i + 1, &total, &song.title, &track_id);
-            tracks.push(aspotify::PlaylistItemType::Track(track_id));
+            append_track(&track_id, song);
+            tracks.push(aspotify::PlaylistItemType::Track(track_id)); 
         } else {
             println!("-> couldn't find {}", &song.title);
         }
