@@ -1,11 +1,13 @@
 use itertools::Itertools;
 use chrono::{Utc, Duration};
+use crate::scraper::WDR;
 
 #[derive(Hash, Eq, Clone)]
 pub struct Song {
     pub time_str: String,
     pub title: String,
     pub interprets: String,
+    pub radio: WDR
 }
 
 pub struct Track {
@@ -15,7 +17,7 @@ pub struct Track {
 
 impl std::cmp::PartialEq for Song {
     fn eq(&self, other: &Self) -> bool {
-        self.title == other.title
+        self.title.eq(&other.title)
     }
 }
 

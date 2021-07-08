@@ -8,18 +8,13 @@ use crate::util::Track;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 
-// fn save_to_file(tracks: &Vec<Track>) {
-//     let yesterday = util::yesterday();
-//     tracks.into_iter().map(|track| track.)
-// }
-
 fn append_track(track_id: &str, song: &Song) {
     let yesterday = util::yesterday();
     let mut file = OpenOptions::new()
         .write(true)
         .create(true)
         .append(true)
-        .open(format!("history/{}.txt", yesterday))
+        .open(format!("history/{:?}-{}.txt", song.radio, yesterday))
         .unwrap();
     writeln!(file, "{}, {}", &track_id, &song.title).unwrap();
 }

@@ -1,13 +1,19 @@
 use scraper::{Html, Selector};
 use crate::util::{Song, SearchParams};
 
-
+#[derive(Clone, Debug, Hash, Eq)]
 pub enum WDR {
     WDR1Live,
     WDR2,
     WDR3,
     WDR4,
     WDR5
+}
+
+impl std::cmp::PartialEq for WDR {
+    fn eq(&self, other: &Self) -> bool {
+        self == other
+    }
 }
 
 impl WDR {
@@ -84,7 +90,8 @@ async fn scrape_wdr_playlist(params: &SearchParams, wdr: &WDR) -> Vec<Song> {
         let song = Song {
             time_str: format!("{} {}", columns[0].trim(), columns[1].trim()),
             title: String::from(columns[4].trim()),
-            interprets: String::from(columns[6].trim())
+            interprets: String::from(columns[6].trim()),
+            radio: wdr.clone()
         };
 
         playlist.push(song);
