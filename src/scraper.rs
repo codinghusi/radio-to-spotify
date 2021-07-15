@@ -19,7 +19,7 @@ impl std::cmp::PartialEq for WDR {
 impl WDR {
     pub fn get_url(&self) -> &str {
         match self {
-            Self::WDR1Live => "https://www1.wdr.de/radio/1live/on-air/playlist/index.jsp",
+            Self::WDR1Live => "https://www1.wdr.de/radio/1live/musik/playlist/index.jsp",
             Self::WDR2 => "https://www1.wdr.de/radio/wdr2/musik/playlist/index.jsp",
             Self::WDR3 => "https://www1.wdr.de/radio/wdr3/titelsuche-wdrdrei-104.jsp",
             Self::WDR4 => "https://www1.wdr.de/radio/wdr4/titelsuche-wdrvier-102.jsp",
