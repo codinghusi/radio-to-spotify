@@ -4,7 +4,6 @@ use crate::scraper::WDR;
 
 #[derive(Hash, Eq, Clone)]
 pub struct Song {
-    pub time_str: String,
     pub title: String,
     pub interprets: String,
     pub radio: WDR

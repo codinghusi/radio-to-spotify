@@ -79,23 +79,22 @@ async fn scrape_wdr_playlist(params: &SearchParams, wdr: &WDR) -> Vec<Song> {
 
     let body = response.text().await.expect("Couldn't get the response text");
     let document = Html::parse_document(&body);
-    
-    let row_selector = Selector::parse(".table tbody tr").expect("Couldn't select '.table tbody tr'");
 
-    let mut playlist = Vec::new();
+    let row_selector = Selector::parse(".table tbody tr").expect("Couldn't select '.table tbody tr '");
 
-    for row in document.select(&row_selector) {
-        let columns = row.text().collect::<Vec<_>>();
+    let mut playlist: Vec<_> = document.
+        select(&row_selector)
+        .map(|row| {
+            let columns: Vec<_> = row.text().collect();
 
-        let song = Song {
-            time_str: format!("{} {}", columns[0].trim(), columns[1].trim()),
-            title: String::from(columns[4].trim()),
-            interprets: String::from(columns[6].trim()),
-            radio: wdr.clone()
-        };
+            let song = Song {
+                title: row.select(&Selector::parse(".entry.title").expect("Couldn't find title of song")).next().unwrap().text().next().unwrap().to_string(),
+                interprets: row.select(&Selector::parse(".entry.performer").expect("Couldn't find interprets of song")).next().unwrap().text().next().unwrap().to_string(),
+                radio: wdr.clone()
+            };
 
-        playlist.push(song);
-    }
+            song
+    }).collect();
 
     playlist
 }

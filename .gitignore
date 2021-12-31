@@ -5,3 +5,4 @@
 config.json
 Cargo.lock
 /history
+main
